@@ -30,10 +30,10 @@ constexpr CanDevice::Config Can0Config =
 {
 	.dataSize = 64,									// must be one of: 8, 12, 16, 20, 24, 32, 48, 64
 	.numTxBuffers = 2,
-	.txFifoSize = 4,
+	.txFifoSize = 30,
 	.numRxBuffers = 0,
-	.rxFifo0Size = 16,
-	.rxFifo1Size = 16,
+	.rxFifo0Size = 32,
+	.rxFifo1Size = 0,
 	.numShortFilterElements = 0,
 	.numExtendedFilterElements = 3,
 	.txEventFifoSize = 2

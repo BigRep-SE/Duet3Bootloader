@@ -32,7 +32,7 @@
 *.app
 
 # Misc
-.settings/language.settings.xml
+.settings/
 
 # Output folders
 /SAMC21/
@@ -47,3 +47,13 @@
 /Duet3_MB6XD-Debug/
 /Duet3_MB6HC-Debug/
 /Duet3_Mini5plus-Debug/
+/CB-SB-04/
+/CB-SB-06/
+/CB-SB-07/
+/CB-MP-04/
+/CB-MP-05/
+/CB-MT-01/
+/CB-CX-01/
+/CB-CX-02/
+/CB-MP-05-Debug/
+/CB-MP-03/

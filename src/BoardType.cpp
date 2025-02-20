@@ -8,7 +8,28 @@
 #include "BoardType.h"
 #include <CanId.h>
 
-static unsigned int boardTypeIndex = 0;
+static unsigned int boardTypeIndex =
+#if defined(__CB_MP_03_A__)
+	0;
+#elif defined(__CB_MP_04_A__)
+	1;
+#elif defined(__CB_MP_05_A__)
+	2;
+#elif defined(__CB_MT_01__)
+	3;
+#elif defined(__CB_CX_01__)
+	4;
+#elif defined(__CB_CX_02__)
+	5;
+#elif defined(__CB_SB_04__)
+	6;
+#elif defined(__CB_SB_06__)
+	7;
+#elif defined(__CB_SB_07__)
+	8;
+#else
+    0;
+#endif
 
 // Constexpr function to check that a table is in increasing order
 inline constexpr bool IsIncreasing(const float *arr, size_t length)
@@ -30,6 +51,132 @@ bool IdentifyBoard(CanAddress& defaultAddress, bool& doHardwareReset, bool& useA
 	defaultAddress = CanId::Exp3HCFirmwareUpdateAddress;				// we use the same reserved CAN address as the 3HC board
 	doHardwareReset = false;
 	useAlternateCanPins = false;
+	return true;
+}
+
+# elif IS_CUSTOM_BOARD
+
+constexpr const char* BoardTypeNames[] = {
+	"CB-MP-03",
+	"CB-MP-04",
+	"CB-MP-05",
+	"CB-MT-01",
+	"CB-CX-01",
+	"CB-CX-02",
+	"CB-SB-04",
+	"CB-SB-06",
+	"CB-SB-07"
+};
+
+constexpr unsigned int BoardTypeVersions[] = {
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0
+};
+
+constexpr Pin LedPins_MotorBoards[2] = { PortBPin(23), PortBPin(22) };
+constexpr bool LedActiveHigh_MotorBoards = false;
+
+constexpr Pin LedPins_SmartExtruderBoards[1] = { PortBPin(3) };
+constexpr bool LedActiveHigh_SmartExtruderBoards = false;
+
+constexpr Pin LedPins_StageBoards[1] = { PortBPin(6) };
+constexpr bool LedActiveHigh_StageBoards = false;
+
+constexpr const Pin *LedPinsTables[] = {
+	LedPins_MotorBoards,
+	LedPins_MotorBoards,
+	LedPins_MotorBoards,
+	LedPins_MotorBoards,
+	LedPins_SmartExtruderBoards,
+	LedPins_SmartExtruderBoards,
+	LedPins_StageBoards,
+	LedPins_StageBoards,
+	LedPins_StageBoards
+};
+
+constexpr bool LedActiveHigh[] = {
+	LedActiveHigh_MotorBoards,
+	LedActiveHigh_MotorBoards,
+	LedActiveHigh_MotorBoards,
+	LedActiveHigh_MotorBoards,
+	LedActiveHigh_SmartExtruderBoards,
+	LedActiveHigh_SmartExtruderBoards,
+	LedActiveHigh_StageBoards,
+	LedActiveHigh_StageBoards,
+	LedActiveHigh_StageBoards
+};
+
+// Read the board address
+uint8_t ReadBoardAddress(size_t numAddress, const Pin *addressPins)
+{
+	uint8_t rslt = 0;
+
+	for (unsigned int i = 0; i < numAddress; ++i)
+	{
+		if (!digitalRead(addressPins[i]))
+		{
+			rslt |= 1u << i;
+		}
+	}
+
+	return rslt;
+}
+
+bool IdentifyBoard(CanAddress& defaultAddress, bool& doHardwareReset, bool& useAlternateCanPins)
+{
+
+#if IS_CUSTOM_MOTOR_BOARD
+
+	constexpr size_t NumAddressBits = 3;
+	constexpr Pin BoardAddressPins[NumAddressBits] = { PortBPin(16), PortAPin(0), PortAPin(1) };
+
+	for (Pin p : BoardAddressPins)
+	{
+		pinMode(p, INPUT_PULLUP);
+	}
+	// Check whether address switches are set to zero. If so then reset and load new firmware
+	const CanAddress switches =  ReadBoardAddress(NumAddressBits, BoardAddressPins);
+	CanAddress axisAddress = switches >> 1 ;  // 1: X ; 2: Y ; 3: Z ; 0: Other
+	const CanAddress positionAddress = switches & 0x01 ;
+	if(axisAddress == 0)
+	{
+		axisAddress = 4;
+	}
+	const CanAddress boardAddress = CanId::MotorBoardBaseAddress * axisAddress + positionAddress;
+	useAlternateCanPins = false;
+	doHardwareReset = (boardAddress == 0);
+	defaultAddress = (doHardwareReset) ? CanId::Exp3HCFirmwareUpdateAddress : boardAddress;
+
+#elif IS_CUSTOM_STAGE_BOARD
+
+	defaultAddress = CanId::StageBoardBaseAddress;
+	useAlternateCanPins = false;
+	doHardwareReset = false;
+
+#elif IS_CUSTOM_EXTRUDER_BOARD
+
+	constexpr size_t NumAddressBits = 2;
+	constexpr Pin BoardAddressPins[NumAddressBits] = { PortBPin(30), PortBPin(23) };
+
+	for (Pin p : BoardAddressPins)
+	{
+		pinMode(p, INPUT_PULLUP);
+	}
+	// Check whether address switches are set to zero. If so then reset and load new firmware
+	const CanAddress switches =  ReadBoardAddress(NumAddressBits, BoardAddressPins);
+	const CanAddress boardAddress = CanId::SmartExtruderBaseAddress + switches;
+	useAlternateCanPins = false;
+	doHardwareReset = (boardAddress == 0);
+	defaultAddress = (doHardwareReset) ? CanId::Exp3HCFirmwareUpdateAddress : boardAddress;
+#endif
+
 	return true;
 }
 
@@ -509,7 +656,7 @@ static_assert(ARRAY_SIZE(BoardTypeVersions) == ARRAY_SIZE(BoardTypeNames));
 static_assert(ARRAY_SIZE(LedPinsTables) == ARRAY_SIZE(BoardTypeNames));
 static_assert(ARRAY_SIZE(LedActiveHigh) == ARRAY_SIZE(BoardTypeNames));
 
-#if !defined(CAN_IAP) && !defined(SAMMYC21)
+#if !defined(CAN_IAP) && !defined(SAMMYC21) && IS_NOT_CUSTOM_BOARD
 static_assert(ARRAY_SIZE(CanResetPins) == ARRAY_SIZE(BoardTypeNames));
 #endif
 

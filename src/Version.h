@@ -8,6 +8,15 @@
 #ifndef SRC_VERSION_H_
 #define SRC_VERSION_H_
 
-#define VERSION_TEXT		"2.11 (2024-08-09)"
+#ifndef VERSION_TEXT
+#ifndef VERSIONTAG
+#define VERSION_TEXT		"3.6.LOC"
+#else
+# define VERSION_STR(x) #x
+# define VERSION_TO_STR(x) VERSION_STR(x)
+# define VERSION_TEXT VERSION_TO_STR(VERSIONTAG)
+#endif
+#endif
+
 
 #endif /* SRC_VERSION_H_ */

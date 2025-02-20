@@ -31,7 +31,7 @@ extern "C" void debugPrintf(const char* fmt, ...) __attribute__ ((format (printf
 #define DEBUG_HERE do { } while (false)
 //#define DEBUG_HERE do { debugPrintf("At " __FILE__ " line %d\n", __LINE__); delay(50); } while (false)
 
-#if defined(__SAME51N19A__)
+#if defined(__SAME51N19A__) || defined(__SAME51J20A__)
 # define SAME5x		1
 # define SAMC21		0
 # define SAME70		0
